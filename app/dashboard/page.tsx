@@ -8,7 +8,7 @@ export default async function DashboardPage() {
   const user = await requireUser();
   if (!user.favoriteMovie) redirect("/onboarding");
 
-  // Missing Google name or photo falls back to the email prefix and an initial (D-04).
+  // Missing Google name or photo falls back to the email prefix and an initial.
   const displayName = user.name ?? user.email?.split("@")[0] ?? "there";
 
   return (

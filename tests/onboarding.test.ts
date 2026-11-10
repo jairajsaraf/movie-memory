@@ -25,7 +25,7 @@ const movieOf = async (id: string) => (await db.user.findUnique({ where: { id } 
 beforeEach(resetDb);
 afterAll(() => db.$disconnect());
 
-describe("onboarding action authorization (D-10)", () => {
+describe("onboarding action authorization", () => {
   it("with no session redirects to / and writes nothing", async () => {
     const u = await createUser(null);
     mockAuth.mockResolvedValue(null);

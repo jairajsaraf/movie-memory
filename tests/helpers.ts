@@ -14,7 +14,7 @@ export function createUser(favoriteMovie: string | null) {
 }
 
 // Seeds a fact of the given age plus the lease row a real finalize would have left
-// (blockedUntil = createdAt + 60s), in one statement so both use the same now() (D-10).
+// (blockedUntil = createdAt + 60s), in one statement so both use the same now().
 export async function seedFact(userId: string, movie: string, ageSeconds: number, text: string) {
   await db.$executeRaw`
     WITH f AS (

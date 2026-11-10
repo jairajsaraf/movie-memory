@@ -3,7 +3,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 
-// D-07 / D-08. Every time comparison uses the database's now(). Each statement below runs alone in
+// Every time comparison uses the database's now(). Each statement below runs alone in
 // autocommit, so now() is that statement's start; never wrap them in $transaction in app code.
 export const CACHE_WINDOW_SECONDS = 60;
 export const LEASE_SECONDS = 30;
@@ -30,7 +30,7 @@ export async function findFreshFact(sql: Sql, userId: string, movie: string) {
 }
 
 // One row back = this request may generate. The WHERE runs on the locked, latest row version
-// after any conflict wait, so the decision never rests on a stale snapshot (D-07 revision).
+// after any conflict wait, so the decision never rests on a stale snapshot.
 export async function claimLease(sql: Sql, userId: string, movie: string, token: string) {
   const rows = await sql.$queryRaw<unknown[]>`
     INSERT INTO "FactLease" ("userId", movie, token, "blockedUntil")
@@ -83,7 +83,7 @@ async function pollWinner(userId: string, movie: string) {
   return row;
 }
 
-// D-09: most recent fact of any age for this user + movie, else a friendly error.
+// Most recent fact of any age for this user + movie, else a friendly error.
 async function fallback(userId: string, movie: string): Promise<FactResult> {
   const fact = await db.fact.findFirst({
     where: { userId, movie },
@@ -107,7 +107,7 @@ export async function getFact(userId: string, generate: (movie: string) => Promi
     try {
       text = await generate(movie);
     } catch (err) {
-      console.error("fact generation failed", err); // server log only; the user gets D-09's fallback
+      console.error("fact generation failed", err); // server log only; the user gets the fallback
       await releaseLease(db, userId, movie, token);
       return fallback(userId, movie);
     }

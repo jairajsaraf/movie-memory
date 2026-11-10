@@ -1,6 +1,6 @@
 import { defineConfig, env } from "prisma/config";
 
-// Prisma 7 does not load .env itself; Node 24 can (D-11, no dotenv dependency).
+// Prisma 7 does not load .env itself; Node 24 can (no dotenv dependency).
 try {
   process.loadEnvFile();
 } catch {

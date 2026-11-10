@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 
-// The single auth check (D-04): every page and server action calls this. It returns the user as
+// The single auth check: every page and server action calls this. It returns the user as
 // stored in the database (so `favoriteMovie` is never stale) or redirects to the landing page.
 export async function requireUser() {
   const session = await auth();

@@ -14,7 +14,7 @@ model User {
   email         String?     @unique
   emailVerified DateTime?
   image         String?
-  // One favorite movie per user; null means "not onboarded yet" (D-03, D-04).
+  // One favorite movie per user; null means "not onboarded yet".
   favoriteMovie String?     @db.VarChar(200)
   accounts      Account[]
   sessions      Session[]
@@ -58,7 +58,7 @@ model VerificationToken {
 }
 
 // Facts are only ever inserted. `movie` is a snapshot of the title the fact was generated for, so
-// "latest fact for this user + movie" is one index read and a movie change is a cache miss (D-03).
+// "latest fact for this user + movie" is one index read and a movie change is a cache miss.
 model Fact {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId    String
@@ -70,7 +70,7 @@ model Fact {
   @@index([userId, movie, createdAt])
 }
 
-// Burst-protection gate (D-07). Never deleted: `blockedUntil` says when a new generation for this
+// Burst-protection gate. Never deleted: `blockedUntil` says when a new generation for this
 // user + movie may next start; `token` is non-null only while a generation is in flight.
 model FactLease {
   userId       String

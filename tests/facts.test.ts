@@ -13,7 +13,7 @@ const failing = () =>
     throw new Error("upstream 500 sk-leak-secret");
   });
 
-describe("cache window (D-08)", () => {
+describe("cache window", () => {
   it("returns a 59s-old fact without generating", async () => {
     const u = await createUser("Heat");
     await seedFact(u.id, "Heat", 59, "cached");
@@ -80,7 +80,7 @@ describe("cache window (D-08)", () => {
   });
 });
 
-describe("generation failure (D-09)", () => {
+describe("generation failure", () => {
   it("falls back to the most recent fact of any age and releases the lease", async () => {
     const u = await createUser("Heat");
     await seedFact(u.id, "Heat", 300, "older");
@@ -116,7 +116,7 @@ describe("generation failure (D-09)", () => {
   });
 });
 
-describe("authorization (D-10)", () => {
+describe("authorization", () => {
   it("user B never gets user A's fact or uses A's lease for the same title", async () => {
     const a = await createUser("Heat");
     const b = await createUser("Heat");
@@ -133,7 +133,7 @@ describe("authorization (D-10)", () => {
   });
 });
 
-describe("burst protection (D-07)", () => {
+describe("burst protection", () => {
   it("20 parallel requests make one generate call and one new row, all showing the same fact", async () => {
     const u = await createUser("Heat");
     // Slow enough that every request reaches the claim while the winner is still generating.
@@ -185,7 +185,7 @@ describe("burst protection (D-07)", () => {
     expect(await claimLease(db, u.id, "Heat", randomUUID())).toBe(false);
   });
 
-  // The race that broke the plan's delete-based SQL (D-07 revision): a claim that starts while a
+  // The race that broke the plan's delete-based SQL: a claim that starts while a
   // finalize is uncommitted must, after waiting on the row lock, see the finalized row.
   it("claim blocked behind an uncommitted finalize returns no lease", async () => {
     const u = await createUser("Heat");

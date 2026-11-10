@@ -33,34 +33,34 @@ database first.
 `npx vitest run --reporter=verbose`, exit code 0:
 
 ```text
- ✓ tests/facts.test.ts > cache window (D-08) > returns a 59s-old fact without generating 165ms
- ✓ tests/facts.test.ts > cache window (D-08) > regenerates when the fact is 60s old 32ms
- ✓ tests/facts.test.ts > cache window (D-08) > regenerates when the fact is 61s old 32ms
- ✓ tests/facts.test.ts > cache window (D-08) > at exactly 60s the fact is not fresh and the lease is claimable; 1µs younger it is the reverse 34ms
- ✓ tests/facts.test.ts > cache window (D-08) > a movie change is a cache miss 31ms
- ✓ tests/facts.test.ts > cache window (D-08) > returns an error for a user who has not picked a movie 16ms
- ✓ tests/facts.test.ts > generation failure (D-09) > falls back to the most recent fact of any age and releases the lease 53ms
- ✓ tests/facts.test.ts > generation failure (D-09) > returns a friendly error with no provider detail when nothing is cached 27ms
- ✓ tests/facts.test.ts > generation failure (D-09) > does not fall back to a fact for a different movie 31ms
- ✓ tests/facts.test.ts > authorization (D-10) > user B never gets user A's fact or uses A's lease for the same title 39ms
- ✓ tests/facts.test.ts > burst protection (D-07) > 20 parallel requests make one generate call and one new row, all showing the same fact 609ms
- ✓ tests/facts.test.ts > burst protection (D-07) > a zombie whose lease expired and was taken over can neither insert nor release 45ms
- ✓ tests/facts.test.ts > burst protection (D-07) > a zombie that failed does not release the new holder's lease 32ms
- ✓ tests/facts.test.ts > burst protection (D-07) > claim blocked behind an uncommitted finalize returns no lease 40ms
+ ✓ tests/facts.test.ts > cache window > returns a 59s-old fact without generating 165ms
+ ✓ tests/facts.test.ts > cache window > regenerates when the fact is 60s old 32ms
+ ✓ tests/facts.test.ts > cache window > regenerates when the fact is 61s old 32ms
+ ✓ tests/facts.test.ts > cache window > at exactly 60s the fact is not fresh and the lease is claimable; 1µs younger it is the reverse 34ms
+ ✓ tests/facts.test.ts > cache window > a movie change is a cache miss 31ms
+ ✓ tests/facts.test.ts > cache window > returns an error for a user who has not picked a movie 16ms
+ ✓ tests/facts.test.ts > generation failure > falls back to the most recent fact of any age and releases the lease 53ms
+ ✓ tests/facts.test.ts > generation failure > returns a friendly error with no provider detail when nothing is cached 27ms
+ ✓ tests/facts.test.ts > generation failure > does not fall back to a fact for a different movie 31ms
+ ✓ tests/facts.test.ts > authorization > user B never gets user A's fact or uses A's lease for the same title 39ms
+ ✓ tests/facts.test.ts > burst protection > 20 parallel requests make one generate call and one new row, all showing the same fact 609ms
+ ✓ tests/facts.test.ts > burst protection > a zombie whose lease expired and was taken over can neither insert nor release 45ms
+ ✓ tests/facts.test.ts > burst protection > a zombie that failed does not release the new holder's lease 32ms
+ ✓ tests/facts.test.ts > burst protection > claim blocked behind an uncommitted finalize returns no lease 40ms
  ✓ tests/auth-session.test.ts > GET /api/auth/session > sends the browser only id, name, email and image, never the session token 363ms
  ✓ tests/auth-session.test.ts > GET /api/auth/session > works under NODE_ENV=production with the variables from .env.example 33ms
- ✓ tests/onboarding.test.ts > onboarding action authorization (D-10) > with no session redirects to / and writes nothing 152ms
- ✓ tests/onboarding.test.ts > onboarding action authorization (D-10) > cannot overwrite a movie that is already set 30ms
- ✓ tests/onboarding.test.ts > onboarding action authorization (D-10) > sets the movie, normalized, for a signed-in user without one 23ms
- ✓ tests/onboarding.test.ts > onboarding action authorization (D-10) > rejects invalid input without writing 19ms
- ✓ tests/movie.test.ts > parseMovie (D-05) > trims surrounding whitespace 2ms
- ✓ tests/movie.test.ts > parseMovie (D-05) > collapses internal whitespace runs to one space 0ms
- ✓ tests/movie.test.ts > parseMovie (D-05) > rejects a NUL character, which Postgres text columns cannot store 1ms
- ✓ tests/movie.test.ts > parseMovie (D-05) > rejects empty and whitespace-only input 0ms
- ✓ tests/movie.test.ts > parseMovie (D-05) > rejects non-string input 0ms
- ✓ tests/movie.test.ts > parseMovie (D-05) > accepts exactly 200 characters and rejects 201 0ms
- ✓ tests/movie.test.ts > parseMovie (D-05) > measures length after trimming and collapsing 0ms
- ✓ tests/movie.test.ts > parseMovie (D-05) > returns a user-facing message on failure 0ms
+ ✓ tests/onboarding.test.ts > onboarding action authorization > with no session redirects to / and writes nothing 152ms
+ ✓ tests/onboarding.test.ts > onboarding action authorization > cannot overwrite a movie that is already set 30ms
+ ✓ tests/onboarding.test.ts > onboarding action authorization > sets the movie, normalized, for a signed-in user without one 23ms
+ ✓ tests/onboarding.test.ts > onboarding action authorization > rejects invalid input without writing 19ms
+ ✓ tests/movie.test.ts > parseMovie > trims surrounding whitespace 2ms
+ ✓ tests/movie.test.ts > parseMovie > collapses internal whitespace runs to one space 0ms
+ ✓ tests/movie.test.ts > parseMovie > rejects a NUL character, which Postgres text columns cannot store 1ms
+ ✓ tests/movie.test.ts > parseMovie > rejects empty and whitespace-only input 0ms
+ ✓ tests/movie.test.ts > parseMovie > rejects non-string input 0ms
+ ✓ tests/movie.test.ts > parseMovie > accepts exactly 200 characters and rejects 201 0ms
+ ✓ tests/movie.test.ts > parseMovie > measures length after trimming and collapsing 0ms
+ ✓ tests/movie.test.ts > parseMovie > returns a user-facing message on failure 0ms
  Test Files  4 passed (4)
       Tests  28 passed (28)
 ```
@@ -95,7 +95,7 @@ checked against the original (`cmp`).
 
 | Change made | Result |
 |---|---|
-| Interleave test run against the plan's original delete-based lease SQL (temporary test file, since removed) | **fails**: the blocked claim returned 1 row, i.e. a second generation while the first fact was seconds old. This is the race described in D-07's revision. |
+| Interleave test run against the plan's original delete-based lease SQL (temporary test file, since removed) | **fails**: the blocked claim returned 1 row, i.e. a second generation while the first fact was seconds old. |
 | Claim without `WHERE "FactLease"."blockedUntil" <= now()` | 4 fail: 20-parallel, interleave, exactly-60s, zombie-release |
 | Finalize without the `token = $token` check | 1 fails: zombie insert |
 | Release without the `token = $token` check | 1 fails: zombie release |
@@ -103,7 +103,7 @@ checked against the original (`cmp`).
 | Onboarding update without `favoriteMovie: null` in the `WHERE` | 1 fails: cannot overwrite |
 | Onboarding action reading the first user instead of `requireUser()` | 1 fails: no session |
 
-The three Phase 4 review fixes (D-04 and D-05 revisions) were written test-first. Each test failed
+The three Phase 4 review fixes were written test-first. Each test failed
 on the old code:
 
 | Test | Failure before the fix |
@@ -132,19 +132,31 @@ would fail. `GET /dashboard`:
 - The server log has `fact generation failed Error: Missing credentials…`.
 - The page HTML contains neither "Missing credentials" nor "apiKey" (grep count 0).
 
-The seeded rows were deleted afterwards. Earlier, in Phase 2 (D-02 revision), a seeded session
+The seeded rows were deleted afterwards. Earlier, in Phase 2, a seeded session
 resolved through `auth()`, with these redirects: no cookie → `/`; no movie → `/onboarding`; movie
 set → 200; `/onboarding` with a movie → `/dashboard`.
 
 ## Not verified
 
-- **A live `gpt-6-luna` call.** It needs the owner's key and has not been made, so the prompt and
-  response handling in `lib/openai.ts` have run only up to the missing-key error.
-- **The real Google sign-in**, including first-time vs returning, run by hand in a browser.
-- **The onboarding form and the sign-out button in a browser.** The server action itself is
-  covered by `tests/onboarding.test.ts`.
+- Nothing from the earlier list remains. Not run: `npm start`, and a timed (to the second) check
+  of the 60 s boundary.
 
-## Deferred by the owner (D-11)
+## Confirmed by hand, 2026-11-10
+
+Run by the owner in their own browser against `next dev` on `localhost:3000`, with a real Google
+OAuth client (test user) and a real OpenAI key. I read the dev server log (OAuth codes not quoted).
+
+- **Confirmed:** Google sign-in, then `/dashboard` redirected to `/onboarding` on first visit;
+  `POST /onboarding` saved the movie; the dashboard showed name, email, photo and movie.
+- **Confirmed:** sign-out returned to the landing page; signing in again went to `/dashboard`
+  (200) with no onboarding redirect.
+- **Confirmed:** a live `gpt-6-luna` call produced a fact (~3 s request). A refresh soon after
+  returned the same fact (~114 ms request); a refresh after 60 s returned a different fact (~2 s
+  request). No OpenAI 401/404/429 and no `UntrustedHost` in the log.
+- **Inferred:** the hydration warning in the dev overlay comes from a browser extension (the
+  injected `bis_*` attributes), not the app.
+
+## Deferred by the owner
 
 - Playwright end-to-end tests of the UI auth flow. It is to be checked by hand instead.
 - `next build` followed by a grep of `.next/static` for key patterns. Until then, the only

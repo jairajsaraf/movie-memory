@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseMovie } from "@/lib/movie";
 
-describe("parseMovie (D-05)", () => {
+describe("parseMovie", () => {
   it("trims surrounding whitespace", () => {
     expect(parseMovie("  Heat  ")).toEqual({ ok: true, value: "Heat" });
   });

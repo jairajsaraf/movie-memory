@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const MOVIE_MAX_LENGTH = 200;
 
-// Trim, collapse whitespace runs, then require 1..200 characters (D-05). Runs on the server only.
+// Trim, collapse whitespace runs, then require 1..200 characters. Runs on the server only.
 const movieSchema = z
   .string()
   .transform((s) => s.trim().replace(/\s+/g, " "))

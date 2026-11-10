@@ -2,7 +2,7 @@ import { ERROR, getFact, type FactResult } from "@/lib/facts";
 import { generateFact } from "@/lib/openai";
 
 // Rendered inside <Suspense>. Any error (database included) becomes the friendly variant, so
-// nothing from it reaches the page (D-09). The fact is React text, never HTML (D-06).
+// nothing from it reaches the page. The fact is React text, never HTML.
 export async function FactCard({ userId }: { userId: string }) {
   let result: FactResult;
   try {

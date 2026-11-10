@@ -7,7 +7,7 @@ import { requireUser } from "@/lib/session";
 
 export type OnboardingState = { error?: string };
 
-// Set-once (D-05): the WHERE clause only matches a user with no movie yet, so a double submit or a
+// Set-once: the WHERE clause only matches a user with no movie yet, so a double submit or a
 // second tab is harmless. The user id comes from the session, never from the form.
 export async function saveMovie(_prev: OnboardingState, formData: FormData): Promise<OnboardingState> {
   const user = await requireUser();
