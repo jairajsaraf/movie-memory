@@ -1,0 +1,138 @@
+# Verification
+
+What was run and what it showed. Everything here was run against commit `1f939ca` on
+2026-11-09, on Node 24.18.1 with PostgreSQL 17.11 (`postgres:17-alpine` from
+`docker-compose.yml`). Statements are **confirmed** (I ran it and read the output), or listed
+under "Not verified".
+
+## How to reproduce
+
+```bash
+docker compose up -d
+```
+
+```bash
+npm test
+```
+
+```bash
+npm run typecheck
+```
+
+```bash
+npm run lint
+```
+
+`npm test` needs `TEST_DATABASE_URL` (see `.env.example`). `vitest.config.mts` refuses to start if
+it is unset or equals `DATABASE_URL`, and `tests/helpers.ts` refuses to truncate any database
+whose name does not end in `_test`. `tests/global-setup.ts` applies the migrations to the test
+database first.
+
+## Vitest: 25 passed
+
+`npx vitest run --reporter=verbose`, exit code 0:
+
+```text
+ ✓ tests/facts.test.ts > cache window (D-08) > returns a 59s-old fact without generating 166ms
+ ✓ tests/facts.test.ts > cache window (D-08) > regenerates when the fact is 60s old 37ms
+ ✓ tests/facts.test.ts > cache window (D-08) > regenerates when the fact is 61s old 31ms
+ ✓ tests/facts.test.ts > cache window (D-08) > at exactly 60s the fact is not fresh and the lease is claimable; 1µs younger it is the reverse 31ms
+ ✓ tests/facts.test.ts > cache window (D-08) > a movie change is a cache miss 31ms
+ ✓ tests/facts.test.ts > cache window (D-08) > returns an error for a user who has not picked a movie 16ms
+ ✓ tests/facts.test.ts > generation failure (D-09) > falls back to the most recent fact of any age and releases the lease 51ms
+ ✓ tests/facts.test.ts > generation failure (D-09) > returns a friendly error with no provider detail when nothing is cached 25ms
+ ✓ tests/facts.test.ts > generation failure (D-09) > does not fall back to a fact for a different movie 32ms
+ ✓ tests/facts.test.ts > authorization (D-10) > user B never gets user A's fact or uses A's lease for the same title 36ms
+ ✓ tests/facts.test.ts > burst protection (D-07) > 20 parallel requests make one generate call and one new row, all showing the same fact 627ms
+ ✓ tests/facts.test.ts > burst protection (D-07) > a zombie whose lease expired and was taken over can neither insert nor release 43ms
+ ✓ tests/facts.test.ts > burst protection (D-07) > a zombie that failed does not release the new holder's lease 30ms
+ ✓ tests/facts.test.ts > burst protection (D-07) > claim blocked behind an uncommitted finalize returns no lease 32ms
+ ✓ tests/onboarding.test.ts > onboarding action authorization (D-10) > with no session redirects to / and writes nothing 157ms
+ ✓ tests/onboarding.test.ts > onboarding action authorization (D-10) > cannot overwrite a movie that is already set 31ms
+ ✓ tests/onboarding.test.ts > onboarding action authorization (D-10) > sets the movie, normalized, for a signed-in user without one 23ms
+ ✓ tests/onboarding.test.ts > onboarding action authorization (D-10) > rejects invalid input without writing 18ms
+ ✓ tests/movie.test.ts > parseMovie (D-05) > trims surrounding whitespace 3ms
+ ✓ tests/movie.test.ts > parseMovie (D-05) > collapses internal whitespace runs to one space 0ms
+ ✓ tests/movie.test.ts > parseMovie (D-05) > rejects empty and whitespace-only input 1ms
+ ✓ tests/movie.test.ts > parseMovie (D-05) > rejects non-string input 0ms
+ ✓ tests/movie.test.ts > parseMovie (D-05) > accepts exactly 200 characters and rejects 201 0ms
+ ✓ tests/movie.test.ts > parseMovie (D-05) > measures length after trimming and collapsing 0ms
+ ✓ tests/movie.test.ts > parseMovie (D-05) > returns a user-facing message on failure 0ms
+
+ Test Files  3 passed (3)
+      Tests  25 passed (25)
+```
+
+The run also prints `fact generation failed Error: upstream 500 sk-leak-secret` to stderr. That
+is the server-side log line from the failure tests (the fake provider error), not a failure. The
+test asserts the text never reaches the result.
+
+### What the tests stand on
+
+- **Real database, no mocks.** `getFact` takes `generate` as a parameter, so the tests pass a fake
+  and never call OpenAI. The SQL, the clock and the locks are the real ones.
+- **Ages are seeded with `now() - interval`.** The seed also writes the matching `FactLease` row
+  (`blockedUntil = createdAt + 60s`), the same state a real finalize leaves. A test that seeded
+  only the fact would exercise just the fast path.
+- **The 60s and 61s seeds are checked a few milliseconds later**, so their real age is 60s plus
+  latency. The exact boundary is the separate test that runs inside one transaction: `now()` is
+  frozen there, and the age is exactly 60s or exactly 59.999999s.
+- **The 20-parallel test's fake `generate` waits 500ms.** All 20 requests therefore reach the
+  claim while the winner is still generating, so passing on the fast path alone is impossible.
+- **The interleave test** holds a finalize open in a transaction and fires a claim. It waits
+  until `pg_stat_activity` shows that claim blocked on a lock (3s hard deadline, so the test cannot
+  pass without the block happening), then commits and asserts the claim got no lease.
+- **The onboarding tests mock only `@/auth` (the session source) and `next/navigation` (redirect).**
+  `requireUser`, the server action and the database are real.
+
+## Each guard was seen to fail
+
+The facts and onboarding suites passed on their first run. A test never seen failing proves
+nothing, so each guard was broken on purpose and the suite re-run. The code was then restored and
+checked against the original (`cmp`).
+
+| Change made | Result |
+|---|---|
+| Interleave test run against the plan's original delete-based lease SQL (temporary test file, since removed) | **fails**: the blocked claim returned 1 row, i.e. a second generation while the first fact was seconds old. This is the race described in D-07's revision. |
+| Claim without `WHERE "FactLease"."blockedUntil" <= now()` | 4 fail: 20-parallel, interleave, exactly-60s, zombie-release |
+| Finalize without the `token = $token` check | 1 fails: zombie insert |
+| Release without the `token = $token` check | 1 fails: zombie release |
+| Freshness `>` changed to `>=` | 1 fails: exactly-60s |
+| Onboarding update without `favoriteMovie: null` in the `WHERE` | 1 fails: cannot overwrite |
+| Onboarding action reading the first user instead of `requireUser()` | 1 fails: no session |
+
+## Type check and lint
+
+`npx tsc --noEmit`: exit code 0, no output.
+
+`npx eslint`: exit code 0, no output.
+
+## Manual smoke test: dashboard fact card
+
+`next dev` was run against the dev database with a session row seeded by hand. The request
+sent its token as the `authjs.session-token` cookie, and `OPENAI_API_KEY` was unset so generation
+would fail. `GET /dashboard`:
+
+- The HTML streamed the skeleton ("Finding a fact…") and then the friendly error variant.
+- The server log has `fact generation failed Error: Missing credentials…`.
+- The page HTML contains neither "Missing credentials" nor "apiKey" (grep count 0).
+
+The seeded rows were deleted afterwards. Earlier, in Phase 2 (D-02 revision), a seeded session
+resolved through `auth()`, with these redirects: no cookie → `/`; no movie → `/onboarding`; movie
+set → 200; `/onboarding` with a movie → `/dashboard`.
+
+## Not verified
+
+- **A live `gpt-6-luna` call.** It needs the owner's key and has not been made, so the prompt and
+  response handling in `lib/openai.ts` have run only up to the missing-key error.
+- **The real Google sign-in**, including first-time vs returning, run by hand in a browser.
+- **The onboarding form and the sign-out button in a browser.** The server action itself is
+  covered by `tests/onboarding.test.ts`.
+
+## Deferred by the owner (D-11)
+
+- Playwright end-to-end tests of the UI auth flow. It is to be checked by hand instead.
+- `next build` followed by a grep of `.next/static` for key patterns. Until then, the only
+  evidence that the key stays server-side is `import "server-only"` at the top of `lib/openai.ts`,
+  which turns any client import into a build error. That is **inferred** from the `server-only`
+  package's documented behaviour; it was not tested here.
