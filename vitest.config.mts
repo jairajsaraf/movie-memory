@@ -24,7 +24,6 @@ if (!testDbName.endsWith("_test")) {
 export default defineConfig({
   resolve: { alias: { "@": fileURLToPath(new URL(".", import.meta.url)) } },
   test: {
-    environment: "node",
     include: ["tests/**/*.test.ts"],
     globalSetup: ["tests/global-setup.ts"],
     // lib/db.ts reads DATABASE_URL at import; test.env reaches the workers (vitest.dev/config/env).

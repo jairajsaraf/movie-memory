@@ -44,16 +44,8 @@ describe("cache window", () => {
     const exact = await createUser("Heat");
     const younger = await createUser("Heat");
     await db.$transaction(async (tx) => {
-      for (const [u, age] of [[exact, "60"], [younger, "59.999999"]] as const) {
-        await tx.$executeRaw`
-          WITH f AS (
-            INSERT INTO "Fact" (id, "userId", movie, text, "createdAt")
-            VALUES (gen_random_uuid(), ${u.id}, 'Heat', 'x', now() - make_interval(secs => ${age}::float8))
-            RETURNING "createdAt"
-          )
-          INSERT INTO "FactLease" ("userId", movie, token, "blockedUntil")
-          SELECT ${u.id}, 'Heat', NULL, "createdAt" + interval '60 seconds' FROM f`;
-      }
+      await seedFact(exact.id, "Heat", 60, "x", tx);
+      await seedFact(younger.id, "Heat", 59.999999, "x", tx);
       expect(await findFreshFact(tx, exact.id, "Heat")).toBeNull();
       expect(await claimLease(tx, exact.id, "Heat", randomUUID())).toBe(true);
       expect(await findFreshFact(tx, younger.id, "Heat")).not.toBeNull();
