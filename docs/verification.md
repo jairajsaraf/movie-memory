@@ -24,11 +24,12 @@ npm run lint
 ```
 
 `npm test` needs `TEST_DATABASE_URL` (see `.env.example`). `vitest.config.mts` refuses to start if
-it is unset or equals `DATABASE_URL`, and `tests/helpers.ts` refuses to truncate any database
-whose name does not end in `_test`. `tests/global-setup.ts` applies the migrations to the test
-database first.
+it is unset, equals `DATABASE_URL`, or names a database that does not end in `_test` (checked
+before any migration runs; it reads the URL, it does not ask the server). `tests/helpers.ts`
+refuses to truncate any database whose name does not end in `_test`. `tests/global-setup.ts`
+applies the migrations to the test database first.
 
-## Vitest: 28 passed
+## Vitest: 30 passed
 
 `npx vitest run --reporter=verbose`, exit code 0:
 
@@ -39,21 +40,23 @@ database first.
  ✓ tests/facts.test.ts > cache window > at exactly 60s the fact is not fresh and the lease is claimable; 1µs younger it is the reverse 34ms
  ✓ tests/facts.test.ts > cache window > a movie change is a cache miss 31ms
  ✓ tests/facts.test.ts > cache window > returns an error for a user who has not picked a movie 16ms
- ✓ tests/facts.test.ts > generation failure > falls back to the most recent fact of any age and releases the lease 53ms
- ✓ tests/facts.test.ts > generation failure > returns a friendly error with no provider detail when nothing is cached 27ms
- ✓ tests/facts.test.ts > generation failure > does not fall back to a fact for a different movie 31ms
- ✓ tests/facts.test.ts > authorization > user B never gets user A's fact or uses A's lease for the same title 39ms
- ✓ tests/facts.test.ts > burst protection > 20 parallel requests make one generate call and one new row, all showing the same fact 609ms
- ✓ tests/facts.test.ts > burst protection > a zombie whose lease expired and was taken over can neither insert nor release 45ms
- ✓ tests/facts.test.ts > burst protection > a zombie that failed does not release the new holder's lease 32ms
+ ✓ tests/facts.test.ts > generation failure > falls back to the most recent fact of any age and releases the lease 73ms
+ ✓ tests/facts.test.ts > generation failure > staggered requests during an outage make one provider call per cooldown, not one each 67ms
+ ✓ tests/facts.test.ts > generation failure > logs only a redacted summary of the provider error 30ms
+ ✓ tests/facts.test.ts > generation failure > returns a friendly error with no provider detail when nothing is cached 28ms
+ ✓ tests/facts.test.ts > generation failure > does not fall back to a fact for a different movie 32ms
+ ✓ tests/facts.test.ts > authorization > user B never gets user A's fact or uses A's lease for the same title 36ms
+ ✓ tests/facts.test.ts > burst protection > 20 parallel requests make one generate call and one new row, all showing the same fact 621ms
+ ✓ tests/facts.test.ts > burst protection > a zombie whose lease expired and was taken over can neither insert nor release 56ms
+ ✓ tests/facts.test.ts > burst protection > a zombie that failed does not release the new holder's lease 43ms
  ✓ tests/facts.test.ts > burst protection > claim blocked behind an uncommitted finalize returns no lease 40ms
- ✓ tests/auth-session.test.ts > GET /api/auth/session > sends the browser only id, name, email and image, never the session token 363ms
- ✓ tests/auth-session.test.ts > GET /api/auth/session > works under NODE_ENV=production with the variables from .env.example 33ms
- ✓ tests/onboarding.test.ts > onboarding action authorization > with no session redirects to / and writes nothing 152ms
- ✓ tests/onboarding.test.ts > onboarding action authorization > cannot overwrite a movie that is already set 30ms
- ✓ tests/onboarding.test.ts > onboarding action authorization > sets the movie, normalized, for a signed-in user without one 23ms
- ✓ tests/onboarding.test.ts > onboarding action authorization > rejects invalid input without writing 19ms
- ✓ tests/movie.test.ts > parseMovie > trims surrounding whitespace 2ms
+ ✓ tests/auth-session.test.ts > GET /api/auth/session > sends the browser only id, name, email and image, never the session token 410ms
+ ✓ tests/auth-session.test.ts > GET /api/auth/session > works under NODE_ENV=production with the variables from .env.example 34ms
+ ✓ tests/onboarding.test.ts > onboarding action authorization > with no session redirects to / and writes nothing 169ms
+ ✓ tests/onboarding.test.ts > onboarding action authorization > cannot overwrite a movie that is already set 32ms
+ ✓ tests/onboarding.test.ts > onboarding action authorization > sets the movie, normalized, for a signed-in user without one 25ms
+ ✓ tests/onboarding.test.ts > onboarding action authorization > rejects invalid input without writing 21ms
+ ✓ tests/movie.test.ts > parseMovie > trims surrounding whitespace 3ms
  ✓ tests/movie.test.ts > parseMovie > collapses internal whitespace runs to one space 0ms
  ✓ tests/movie.test.ts > parseMovie > rejects a NUL character, which Postgres text columns cannot store 1ms
  ✓ tests/movie.test.ts > parseMovie > rejects empty and whitespace-only input 0ms
@@ -62,12 +65,16 @@ database first.
  ✓ tests/movie.test.ts > parseMovie > measures length after trimming and collapsing 0ms
  ✓ tests/movie.test.ts > parseMovie > returns a user-facing message on failure 0ms
  Test Files  4 passed (4)
-      Tests  28 passed (28)
+      Tests  30 passed (30)
 ```
 
-The run also prints `fact generation failed Error: upstream 500 sk-leak-secret` to stderr. That
-is the server-side log line from the failure tests (the fake provider error), not a failure. The
-test asserts the text never reaches the result.
+After a failed generation the lease stays blocked for `FAILURE_COOLDOWN_SECONDS` (5 s), so a
+fast-failing provider costs one attempt per user and movie per cooldown. Provider errors are
+logged as a redacted summary (name, status, code, type, request ID), never the message, headers
+or body; "logs only a redacted summary of the provider error" asserts that. These two tests and
+the `_test` name check in `vitest.config.mts` were added after an independent static review
+(2026-11-10); with the cooldown set to 0, the staggered-requests test and the failure test fail.
+The redaction test was not mutation-checked.
 
 ### What the tests stand on
 

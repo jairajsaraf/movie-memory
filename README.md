@@ -11,7 +11,7 @@ Stack: TypeScript, Next.js 16 (App Router), React 19, Tailwind, Postgres 17, Pri
 
 Read this first, so nothing below is oversold.
 
-- **Verified by running:** 28 Vitest tests against a real Postgres, `tsc --noEmit` and `eslint`, all
+- **Verified by running:** 30 Vitest tests against a real Postgres, `tsc --noEmit` and `eslint`, all
   clean. Output is pasted in [docs/verification.md](docs/verification.md).
 - **Checked by hand, not by a test:** the redirects (`/dashboard` without a session goes to `/`; no
   movie goes to `/onboarding`; a set movie goes to `/dashboard`). I ran those against `next dev`

@@ -91,9 +91,43 @@ describe("generation failure", () => {
     expect(r).toMatchObject({ status: "stale", fact: { text: "newest stale" } });
     const lease = await getLease(u.id, "Heat");
     expect(lease?.token).toBeNull();
-    // Released: the next request may try again straight away.
+    // Released with a cooldown: an immediate retry falls back instead of calling the provider.
+    const early = ok("too early");
+    expect(await getFact(u.id, early)).toMatchObject({ status: "stale", fact: { text: "newest stale" } });
+    expect(early).not.toHaveBeenCalled();
+    // Once the cooldown has passed the next request may generate again.
+    await db.$executeRaw`UPDATE "FactLease" SET "blockedUntil" = now() - interval '1 second'
+      WHERE "userId" = ${u.id} AND movie = 'Heat'`;
     const retry = ok("recovered");
     expect(await getFact(u.id, retry)).toMatchObject({ status: "generated", fact: { text: "recovered" } });
+  });
+
+  it("staggered requests during an outage make one provider call per cooldown, not one each", async () => {
+    const u = await createUser("Heat");
+    const generate = failing();
+
+    const results = [];
+    for (let i = 0; i < 5; i++) results.push(await getFact(u.id, generate));
+
+    expect(generate).toHaveBeenCalledOnce();
+    expect(results.every((r) => r.status === "error")).toBe(true);
+  });
+
+  it("logs only a redacted summary of the provider error", async () => {
+    const u = await createUser("Heat");
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const err = Object.assign(new Error("upstream 500 sk-leak-secret"), { status: 500, requestID: "req_1" });
+      await getFact(u.id, async () => {
+        throw err;
+      });
+      const logged = JSON.stringify(spy.mock.calls);
+      expect(logged).toContain("req_1");
+      expect(logged).not.toContain("sk-leak");
+      expect(logged).not.toContain("upstream");
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("returns a friendly error with no provider detail when nothing is cached", async () => {

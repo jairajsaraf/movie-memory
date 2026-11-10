@@ -12,6 +12,14 @@ const testDb = process.env.TEST_DATABASE_URL;
 if (!testDb || testDb === process.env.DATABASE_URL) {
   throw new Error("Set TEST_DATABASE_URL to a separate database: the suite truncates its tables.");
 }
+// Runs before global setup applies migrations, so a mis-pointed URL is refused before it is
+// touched. The database name has to end in _test (the same rule tests/helpers.ts applies before
+// truncating); this also catches the app database reached through another hostname or parameter.
+// Limit: this reads the URL; it does not ask the server which database it is.
+const testDbName = decodeURIComponent(new URL(testDb).pathname.replace(/^\//, ""));
+if (!testDbName.endsWith("_test")) {
+  throw new Error(`TEST_DATABASE_URL must point at a database whose name ends in _test (got "${testDbName}").`);
+}
 
 export default defineConfig({
   resolve: { alias: { "@": fileURLToPath(new URL(".", import.meta.url)) } },

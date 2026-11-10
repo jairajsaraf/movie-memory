@@ -1,4 +1,4 @@
-import { ERROR, getFact, type FactResult } from "@/lib/facts";
+import { describeError, ERROR, getFact, type FactResult } from "@/lib/facts";
 import { generateFact } from "@/lib/openai";
 
 // Rendered inside <Suspense>. Any error (database included) becomes the friendly variant, so
@@ -8,7 +8,7 @@ export async function FactCard({ userId }: { userId: string }) {
   try {
     result = await getFact(userId, generateFact);
   } catch (err) {
-    console.error("getFact failed", err);
+    console.error("getFact failed", describeError(err));
     result = ERROR;
   }
 

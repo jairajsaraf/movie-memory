@@ -7,6 +7,9 @@ import { db } from "@/lib/db";
 // autocommit, so now() is that statement's start; never wrap them in $transaction in app code.
 export const CACHE_WINDOW_SECONDS = 60;
 export const LEASE_SECONDS = 30;
+// After a failed generation the lease stays blocked this long, so a fast-failing provider (429,
+// 5xx) costs one attempt per user and movie per cooldown, not one per request.
+export const FAILURE_COOLDOWN_SECONDS = 5;
 const POLL_MS = 250;
 
 type Sql = Prisma.TransactionClient;
@@ -60,8 +63,18 @@ export async function finalizeFact(sql: Sql, userId: string, movie: string, toke
 
 export async function releaseLease(sql: Sql, userId: string, movie: string, token: string) {
   await sql.$executeRaw`
-    UPDATE "FactLease" SET token = NULL, "blockedUntil" = now()
+    UPDATE "FactLease"
+    SET token = NULL, "blockedUntil" = now() + make_interval(secs => ${FAILURE_COOLDOWN_SECONDS}::int)
     WHERE "userId" = ${userId} AND movie = ${movie} AND token = ${token}::uuid`;
+}
+
+// Log shape for errors: never the message, headers or body, which can carry provider text. The
+// OpenAI SDK's APIError has status, code, type and requestID (openai 7.54.0, core/error.d.ts).
+export function describeError(err: unknown) {
+  if (!(err instanceof Error)) return { name: typeof err };
+  const e = err as { status?: unknown; code?: unknown; type?: unknown; requestID?: unknown };
+  const pick = (v: unknown) => (typeof v === "string" || typeof v === "number" ? v : undefined);
+  return { name: err.name, status: pick(e.status), code: pick(e.code), type: pick(e.type), requestID: pick(e.requestID) };
 }
 
 // One statement, one snapshot: finalize writes the fact and clears the token in one commit, so
@@ -107,7 +120,7 @@ export async function getFact(userId: string, generate: (movie: string) => Promi
     try {
       text = await generate(movie);
     } catch (err) {
-      console.error("fact generation failed", err); // server log only; the user gets the fallback
+      console.error("fact generation failed", describeError(err)); // server log only; the user gets the fallback
       await releaseLease(db, userId, movie, token);
       return fallback(userId, movie);
     }
