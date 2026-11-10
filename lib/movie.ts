@@ -10,7 +10,9 @@ const movieSchema = z
     z
       .string()
       .min(1, "Please enter a movie title.")
-      .max(MOVIE_MAX_LENGTH, `Movie titles can be at most ${MOVIE_MAX_LENGTH} characters.`),
+      .max(MOVIE_MAX_LENGTH, `Movie titles can be at most ${MOVIE_MAX_LENGTH} characters.`)
+      // Postgres text columns cannot store NUL; without this the write throws a 500.
+      .refine((s) => !s.includes("\u0000"), "Please enter a valid movie title."),
   );
 
 export type ParsedMovie = { ok: true; value: string } | { ok: false; error: string };

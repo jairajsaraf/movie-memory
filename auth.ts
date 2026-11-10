@@ -17,9 +17,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [Google],
   session: { strategy: "database" },
   callbacks: {
+    // Allow-list: this object is also what GET /api/auth/session sends to the browser, and the
+    // database session it is built from carries the raw sessionToken.
     session({ session, user }) {
-      session.user.id = user.id;
-      return session;
+      return {
+        user: { id: user.id, name: user.name, email: user.email, image: user.image },
+        expires: session.expires,
+      };
     },
   },
 });

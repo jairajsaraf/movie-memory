@@ -1,8 +1,8 @@
 # Verification
 
-What was run and what it showed. Everything here was run against commit `1f939ca` on
-2026-11-09, on Node 24.18.1 with PostgreSQL 17.11 (`postgres:17-alpine` from
-`docker-compose.yml`). Statements are **confirmed** (I ran it and read the output), or listed
+What was run and what it showed. All runs were on 2026-11-09, on Node 24.18.1 with PostgreSQL
+17.11 (`postgres:17-alpine` from `docker-compose.yml`). Phases 2 and 3 were recorded at
+`1f939ca`. The Vitest output below is the re-run after the Phase 4 review fixes. Statements are **confirmed** (I ran it and read the output), or listed
 under "Not verified".
 
 ## How to reproduce
@@ -28,39 +28,41 @@ it is unset or equals `DATABASE_URL`, and `tests/helpers.ts` refuses to truncate
 whose name does not end in `_test`. `tests/global-setup.ts` applies the migrations to the test
 database first.
 
-## Vitest: 25 passed
+## Vitest: 28 passed
 
 `npx vitest run --reporter=verbose`, exit code 0:
 
 ```text
- ✓ tests/facts.test.ts > cache window (D-08) > returns a 59s-old fact without generating 166ms
- ✓ tests/facts.test.ts > cache window (D-08) > regenerates when the fact is 60s old 37ms
- ✓ tests/facts.test.ts > cache window (D-08) > regenerates when the fact is 61s old 31ms
- ✓ tests/facts.test.ts > cache window (D-08) > at exactly 60s the fact is not fresh and the lease is claimable; 1µs younger it is the reverse 31ms
+ ✓ tests/facts.test.ts > cache window (D-08) > returns a 59s-old fact without generating 165ms
+ ✓ tests/facts.test.ts > cache window (D-08) > regenerates when the fact is 60s old 32ms
+ ✓ tests/facts.test.ts > cache window (D-08) > regenerates when the fact is 61s old 32ms
+ ✓ tests/facts.test.ts > cache window (D-08) > at exactly 60s the fact is not fresh and the lease is claimable; 1µs younger it is the reverse 34ms
  ✓ tests/facts.test.ts > cache window (D-08) > a movie change is a cache miss 31ms
  ✓ tests/facts.test.ts > cache window (D-08) > returns an error for a user who has not picked a movie 16ms
- ✓ tests/facts.test.ts > generation failure (D-09) > falls back to the most recent fact of any age and releases the lease 51ms
- ✓ tests/facts.test.ts > generation failure (D-09) > returns a friendly error with no provider detail when nothing is cached 25ms
- ✓ tests/facts.test.ts > generation failure (D-09) > does not fall back to a fact for a different movie 32ms
- ✓ tests/facts.test.ts > authorization (D-10) > user B never gets user A's fact or uses A's lease for the same title 36ms
- ✓ tests/facts.test.ts > burst protection (D-07) > 20 parallel requests make one generate call and one new row, all showing the same fact 627ms
- ✓ tests/facts.test.ts > burst protection (D-07) > a zombie whose lease expired and was taken over can neither insert nor release 43ms
- ✓ tests/facts.test.ts > burst protection (D-07) > a zombie that failed does not release the new holder's lease 30ms
- ✓ tests/facts.test.ts > burst protection (D-07) > claim blocked behind an uncommitted finalize returns no lease 32ms
- ✓ tests/onboarding.test.ts > onboarding action authorization (D-10) > with no session redirects to / and writes nothing 157ms
- ✓ tests/onboarding.test.ts > onboarding action authorization (D-10) > cannot overwrite a movie that is already set 31ms
+ ✓ tests/facts.test.ts > generation failure (D-09) > falls back to the most recent fact of any age and releases the lease 53ms
+ ✓ tests/facts.test.ts > generation failure (D-09) > returns a friendly error with no provider detail when nothing is cached 27ms
+ ✓ tests/facts.test.ts > generation failure (D-09) > does not fall back to a fact for a different movie 31ms
+ ✓ tests/facts.test.ts > authorization (D-10) > user B never gets user A's fact or uses A's lease for the same title 39ms
+ ✓ tests/facts.test.ts > burst protection (D-07) > 20 parallel requests make one generate call and one new row, all showing the same fact 609ms
+ ✓ tests/facts.test.ts > burst protection (D-07) > a zombie whose lease expired and was taken over can neither insert nor release 45ms
+ ✓ tests/facts.test.ts > burst protection (D-07) > a zombie that failed does not release the new holder's lease 32ms
+ ✓ tests/facts.test.ts > burst protection (D-07) > claim blocked behind an uncommitted finalize returns no lease 40ms
+ ✓ tests/auth-session.test.ts > GET /api/auth/session > sends the browser only id, name, email and image, never the session token 363ms
+ ✓ tests/auth-session.test.ts > GET /api/auth/session > works under NODE_ENV=production with the variables from .env.example 33ms
+ ✓ tests/onboarding.test.ts > onboarding action authorization (D-10) > with no session redirects to / and writes nothing 152ms
+ ✓ tests/onboarding.test.ts > onboarding action authorization (D-10) > cannot overwrite a movie that is already set 30ms
  ✓ tests/onboarding.test.ts > onboarding action authorization (D-10) > sets the movie, normalized, for a signed-in user without one 23ms
- ✓ tests/onboarding.test.ts > onboarding action authorization (D-10) > rejects invalid input without writing 18ms
- ✓ tests/movie.test.ts > parseMovie (D-05) > trims surrounding whitespace 3ms
+ ✓ tests/onboarding.test.ts > onboarding action authorization (D-10) > rejects invalid input without writing 19ms
+ ✓ tests/movie.test.ts > parseMovie (D-05) > trims surrounding whitespace 2ms
  ✓ tests/movie.test.ts > parseMovie (D-05) > collapses internal whitespace runs to one space 0ms
- ✓ tests/movie.test.ts > parseMovie (D-05) > rejects empty and whitespace-only input 1ms
+ ✓ tests/movie.test.ts > parseMovie (D-05) > rejects a NUL character, which Postgres text columns cannot store 1ms
+ ✓ tests/movie.test.ts > parseMovie (D-05) > rejects empty and whitespace-only input 0ms
  ✓ tests/movie.test.ts > parseMovie (D-05) > rejects non-string input 0ms
  ✓ tests/movie.test.ts > parseMovie (D-05) > accepts exactly 200 characters and rejects 201 0ms
  ✓ tests/movie.test.ts > parseMovie (D-05) > measures length after trimming and collapsing 0ms
  ✓ tests/movie.test.ts > parseMovie (D-05) > returns a user-facing message on failure 0ms
-
- Test Files  3 passed (3)
-      Tests  25 passed (25)
+ Test Files  4 passed (4)
+      Tests  28 passed (28)
 ```
 
 The run also prints `fact generation failed Error: upstream 500 sk-leak-secret` to stderr. That
@@ -100,6 +102,19 @@ checked against the original (`cmp`).
 | Freshness `>` changed to `>=` | 1 fails: exactly-60s |
 | Onboarding update without `favoriteMovie: null` in the `WHERE` | 1 fails: cannot overwrite |
 | Onboarding action reading the first user instead of `requireUser()` | 1 fails: no session |
+
+The three Phase 4 review fixes (D-04 and D-05 revisions) were written test-first. Each test failed
+on the old code:
+
+| Test | Failure before the fix |
+|---|---|
+| "sends the browser only id, name, email and image, never the session token" | the response body contained the raw session token |
+| "works under NODE_ENV=production with the variables from .env.example" | `500`, logged `[auth][error] UntrustedHost: Host must be trusted` |
+| "rejects a NUL character, which Postgres text columns cannot store" | `parseMovie("Heat\u0000").ok` was `true` |
+
+The first run of `tests/auth-session.test.ts` failed for a different reason: Node could not resolve
+`next/server` from inside next-auth. That was fixed in the test setup (`server.deps.inline` in
+`vitest.config.mts`), and the tests were re-run to get the failures above.
 
 ## Type check and lint
 

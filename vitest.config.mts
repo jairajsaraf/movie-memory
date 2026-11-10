@@ -23,5 +23,8 @@ export default defineConfig({
     env: { DATABASE_URL: testDb },
     // Test files share one database and truncate it.
     fileParallelism: false,
+    // next-auth imports "next/server" without an extension, which Node's ESM loader rejects
+    // (next has no exports map); letting Vite resolve it fixes that.
+    server: { deps: { inline: ["next-auth"] } },
   },
 });

@@ -13,6 +13,10 @@ describe("parseMovie (D-05)", () => {
     });
   });
 
+  it("rejects a NUL character, which Postgres text columns cannot store", () => {
+    expect(parseMovie("Heat\u0000").ok).toBe(false);
+  });
+
   it("rejects empty and whitespace-only input", () => {
     expect(parseMovie("").ok).toBe(false);
     expect(parseMovie(" \t\n ").ok).toBe(false);
