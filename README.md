@@ -198,8 +198,10 @@ different buckets 2 seconds apart), and an in-memory lock fails with more than o
 
 - **Freshness is measured from the finalize statement,** not from when the user saw the fact. The
   difference is milliseconds.
-- **No negative caching.** During an OpenAI outage each burst of requests makes one attempt, not one
-  per tab, but a later burst tries again.
+- **Failures are blocked for only 5 seconds.** After a failed generation the lease stays blocked for
+  5 seconds, so a fast-failing provider costs one attempt per user and movie per 5 seconds, not one
+  per request. The block is per user and movie, so during a long outage each active pair still
+  retries every 5 seconds, and users do not share the block.
 - **A loser can wait up to 30 seconds** behind a slow winner (the dashboard shows a skeleton), and a
   crashed process leaves that user and movie on the fallback for up to 30 seconds.
 - **Facts accumulate,** about one row per user per minute at worst, with no retention policy.
@@ -226,7 +228,9 @@ different buckets 2 seconds apart), and an in-memory lock fails with more than o
    and fallback queries (both filter on `userId`, and the code is correct). The 20-parallel test does
    not assert that the 19 losers got `fresh`.
 4. **Fact retention,** for example keep the newest few per user and movie.
-5. **A circuit breaker** so an OpenAI outage costs one attempt per window, not one per burst.
+5. **A breaker shared across users,** so an OpenAI outage costs a few attempts per window in total,
+   not one per active user and movie every 5 seconds. The failure block lives on each user and
+   movie lease row, so nothing is shared today.
 
 ## Note on AI usage
 
