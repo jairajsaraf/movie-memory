@@ -1,16 +1,13 @@
-import { describeError, ERROR, getFact, type FactResult } from "@/lib/facts";
+import { describeError, ERROR, getFact } from "@/lib/facts";
 import { generateFact } from "@/lib/openai";
 
 // Rendered inside <Suspense>. Any error (database included) becomes the friendly variant, so
 // nothing from it reaches the page. The fact is React text, never HTML.
 export async function FactCard({ userId }: { userId: string }) {
-  let result: FactResult;
-  try {
-    result = await getFact(userId, generateFact);
-  } catch (err) {
+  const result = await getFact(userId, generateFact).catch((err) => {
     console.error("getFact failed", describeError(err));
-    result = ERROR;
-  }
+    return ERROR;
+  });
 
   return (
     <section className="rounded-lg border border-zinc-200 p-5 dark:border-zinc-800">

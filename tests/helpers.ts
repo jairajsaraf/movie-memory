@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { CACHE_WINDOW_SECONDS } from "@/lib/facts";
 
@@ -15,8 +16,14 @@ export function createUser(favoriteMovie: string | null) {
 
 // Seeds a fact of the given age plus the lease row a real finalize would have left
 // (blockedUntil = createdAt + 60s), in one statement so both use the same now().
-export async function seedFact(userId: string, movie: string, ageSeconds: number, text: string) {
-  await db.$executeRaw`
+export async function seedFact(
+  userId: string,
+  movie: string,
+  ageSeconds: number,
+  text: string,
+  sql: Prisma.TransactionClient = db,
+) {
+  await sql.$executeRaw`
     WITH f AS (
       INSERT INTO "Fact" (id, "userId", movie, text, "createdAt")
       VALUES (gen_random_uuid(), ${userId}, ${movie}, ${text}, now() - make_interval(secs => ${ageSeconds}::float8))
