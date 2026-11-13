@@ -103,7 +103,7 @@ checked against the original (`cmp`).
 | Change made | Result |
 |---|---|
 | Interleave test run against the plan's original delete-based lease SQL (temporary test file, since removed) | **fails**: the blocked claim returned 1 row, i.e. a second generation while the first fact was seconds old. |
-| Claim without `WHERE "FactLease"."blockedUntil" <= now()` | 4 fail: 20-parallel, interleave, exactly-60s, zombie-release |
+| Claim without `WHERE "FactLease"."blockedUntil" <= now()` | 6 fail: 20-parallel, interleave, exactly-60s, zombie-release, and (since the failure cooldown) fallback-releases-lease and staggered-outage. Re-run 2026-11-12 at `1d341ca`. |
 | Finalize without the `token = $token` check | 1 fails: zombie insert |
 | Release without the `token = $token` check | 1 fails: zombie release |
 | Freshness `>` changed to `>=` | 1 fails: exactly-60s |
